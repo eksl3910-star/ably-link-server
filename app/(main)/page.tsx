@@ -166,17 +166,47 @@ export default function HomePage() {
   // ── Load current user ───────────────────────────────────────────────────────
 
   useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => r.json() as Promise<{ ok?: boolean; user?: User }>)
-      .then((d) => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const sRes = await fetch("/api/settings");
+        const s = (await sRes.json()) as { maintenanceOn?: boolean };
+        if (cancelled) return;
+        if (s.maintenanceOn) {
+          router.replace("/maintenance");
+          setAuthLoading(false);
+          return;
+        }
+      } catch {
+        /* ignore */
+      }
+      if (cancelled) return;
+
+      try {
+        const r = await fetch("/api/auth/me");
+        const d = (await r.json()) as { ok?: boolean; user?: User };
+        if (cancelled) return;
+        if (r.status === 503) {
+          router.replace("/maintenance");
+          setAuthLoading(false);
+          return;
+        }
         if (d.ok && d.user) {
           setUser(d.user);
         } else {
           router.replace("/login");
         }
-      })
-      .catch(() => router.replace("/login"))
-      .finally(() => setAuthLoading(false));
+      } catch {
+        if (!cancelled) router.replace("/login");
+      } finally {
+        if (!cancelled) setAuthLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   // ── Load stats ──────────────────────────────────────────────────────────────

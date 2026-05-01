@@ -222,7 +222,7 @@ export default function AdminPage() {
         </div>
 
         <p className="mt-6 text-xs text-[#7c8394]">
-          점검 모드 전환 시 일반 유저는 /maintenance 페이지로 이동됩니다.
+          점검 중에는 일반·로그인 화면이 모두 막히고 점검 안내만 보입니다. /admin 은 브라우저 Basic Auth 없이 이 비밀번호만으로 동작합니다.
         </p>
       </div>
     </main>

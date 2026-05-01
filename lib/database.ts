@@ -1,4 +1,4 @@
-import { getRequestContext } from "@cloudflare/next-on-pages";
+import { getRequestContext, getOptionalRequestContext } from "@cloudflare/next-on-pages";
 import { SESSION_TTL_MS, CLAIM_WINDOW_MS, ABLY_HOSTNAME } from "@/lib/constants";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -252,6 +252,23 @@ export async function getSettings(): Promise<{
     maintenanceOn: Boolean(row?.maintenanceOn ?? 0),
     touchedAt: row?.touchedAt ?? 0,
   };
+}
+
+/** 미들웨어 등: Worker 컨텍스트가 없으면 false (로컬 등). */
+export async function getMaintenanceOnSafe(): Promise<boolean> {
+  try {
+    const ctx = getOptionalRequestContext();
+    const db = ctx?.env ? pickD1FromEnv(ctx.env) : undefined;
+    if (!db) return false;
+    const row = await db
+      .prepare(
+        `SELECT maintenance_on AS maintenanceOn FROM settings WHERE key = 'global'`
+      )
+      .first<{ maintenanceOn: number }>();
+    return Boolean(row?.maintenanceOn ?? 0);
+  } catch {
+    return false;
+  }
 }
 
 export async function setMaintenance(

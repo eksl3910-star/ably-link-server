@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 type Tab = "login" | "register";
@@ -40,6 +40,15 @@ export default function LoginPage() {
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState<AlertState>(null);
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((r) => r.json() as Promise<{ maintenanceOn?: boolean }>)
+      .then((d) => {
+        if (d.maintenanceOn) router.replace("/maintenance");
+      })
+      .catch(() => {});
+  }, [router]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
