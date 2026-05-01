@@ -26,6 +26,7 @@ function isProtectedUserRoute(pathname: string): boolean {
   return (
     pathname === "/" ||
     pathname.startsWith("/api/links/") ||
+    pathname.startsWith("/api/announcements") ||
     pathname.startsWith("/api/auth/logout") ||
     pathname.startsWith("/api/auth/delete") ||
     pathname.startsWith("/api/auth/me")

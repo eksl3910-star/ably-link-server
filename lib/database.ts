@@ -346,6 +346,92 @@ export async function updateMaintenanceMessage(message: string): Promise<void> {
   }
 }
 
+// ── Announcements ─────────────────────────────────────────────────────────────
+
+const MAX_ANNOUNCEMENT_TITLE_LEN = 200;
+const MAX_ANNOUNCEMENT_BODY_LEN = 10_000;
+
+export type AnnouncementRow = {
+  id: string;
+  title: string;
+  body: string;
+  createdAt: number;
+};
+
+export function clampAnnouncementTitle(raw: string): string {
+  const t = raw.replace(/\u0000/g, "").trim();
+  if (t.length <= MAX_ANNOUNCEMENT_TITLE_LEN) return t;
+  return t.slice(0, MAX_ANNOUNCEMENT_TITLE_LEN);
+}
+
+export function clampAnnouncementBody(raw: string): string {
+  const t = raw.replace(/\u0000/g, "").trimEnd();
+  if (t.length <= MAX_ANNOUNCEMENT_BODY_LEN) return t;
+  return t.slice(0, MAX_ANNOUNCEMENT_BODY_LEN);
+}
+
+export async function listAnnouncements(limit = 100): Promise<AnnouncementRow[]> {
+  const db = getDb();
+  const lim = Math.min(Math.max(1, limit), 200);
+  const res = await db
+    .prepare(
+      `SELECT id, title, body, created_at AS createdAt
+       FROM announcements
+       ORDER BY created_at DESC
+       LIMIT ?`
+    )
+    .bind(lim)
+    .all<AnnouncementRow>();
+  return res.results ?? [];
+}
+
+export async function createAnnouncement(
+  title: string,
+  body: string
+): Promise<AnnouncementRow> {
+  const t = clampAnnouncementTitle(title);
+  const b = clampAnnouncementBody(body);
+  if (!t.trim()) throw new Error("공지 제목을 입력해주세요.");
+  if (!b.trim()) throw new Error("공지 내용을 입력해주세요.");
+
+  const db = getDb();
+  const id = crypto.randomUUID();
+  const now = Date.now();
+  await db
+    .prepare(
+      `INSERT INTO announcements (id, title, body, created_at)
+       VALUES (?, ?, ?, ?)`
+    )
+    .bind(id, t.trim(), b, now)
+    .run();
+
+  return { id, title: t.trim(), body: b, createdAt: now };
+}
+
+export async function updateAnnouncement(
+  id: string,
+  title: string,
+  body: string
+): Promise<{ ok: boolean }> {
+  const t = clampAnnouncementTitle(title);
+  const b = clampAnnouncementBody(body);
+  if (!t.trim()) throw new Error("공지 제목을 입력해주세요.");
+  if (!b.trim()) throw new Error("공지 내용을 입력해주세요.");
+
+  const db = getDb();
+  const res = await db
+    .prepare(`UPDATE announcements SET title = ?, body = ? WHERE id = ?`)
+    .bind(t.trim(), b, id)
+    .run();
+  return { ok: res.meta.changes === 1 };
+}
+
+export async function deleteAnnouncement(id: string): Promise<{ ok: boolean }> {
+  const db = getDb();
+  const res = await db.prepare(`DELETE FROM announcements WHERE id = ?`).bind(id).run();
+  return { ok: res.meta.changes === 1 };
+}
+
 // ── Link helpers ──────────────────────────────────────────────────────────────
 
 export function parseAblyUrl(raw: string): string | null {

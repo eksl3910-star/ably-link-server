@@ -11,6 +11,18 @@ type AlertState = { message: string; type: AlertType } | null;
 type LinkStats = { total: number; mine: number };
 type ClaimedLink = { id: string; url: string; deadline: number };
 type User = { id: string; nickname: string };
+type Announcement = { id: string; title: string; body: string; createdAt: number };
+
+function formatAnnouncementDate(ts: number): string {
+  try {
+    return new Date(ts).toLocaleString("ko-KR", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  } catch {
+    return "";
+  }
+}
 
 async function readResponseJson<T>(res: Response): Promise<{ data: T | null; status: number }> {
   const raw = await res.text();
@@ -409,6 +421,8 @@ export default function HomePage() {
 
   // Stats
   const [stats, setStats] = useState<LinkStats>({ total: 0, mine: 0 });
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [activeAnnIdx, setActiveAnnIdx] = useState(0);
 
   // Upload section
   const [linkText, setLinkText] = useState("");
@@ -493,14 +507,49 @@ export default function HomePage() {
       .catch(() => null);
   }, []);
 
+  const loadAnnouncements = useCallback(() => {
+    fetch("/api/announcements")
+      .then((r) => r.json() as Promise<{ ok?: boolean; items?: Announcement[] }>)
+      .then((d) => {
+        if (d.ok && Array.isArray(d.items)) setAnnouncements(d.items);
+      })
+      .catch(() => null);
+  }, []);
+
+  const refreshDashboard = useCallback(() => {
+    loadStats();
+    loadAnnouncements();
+  }, [loadStats, loadAnnouncements]);
+
   useEffect(() => {
     if (!authLoading && user) {
-      loadStats();
+      refreshDashboard();
       if (!localStorage.getItem("als_guide_done")) {
         setTimeout(() => setShowGuide(true), 400);
       }
     }
-  }, [authLoading, user, loadStats]);
+  }, [authLoading, user, refreshDashboard]);
+
+  useEffect(() => {
+    if (announcements.length === 0) {
+      setActiveAnnIdx(0);
+      return;
+    }
+    setActiveAnnIdx((i) => Math.min(i, announcements.length - 1));
+  }, [announcements]);
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    const id = window.setInterval(() => refreshDashboard(), 20_000);
+    const onVis = () => {
+      if (document.visibilityState === "visible") refreshDashboard();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [authLoading, user, refreshDashboard]);
 
   // ── Timer cleanup ───────────────────────────────────────────────────────────
 
@@ -573,7 +622,7 @@ export default function HomePage() {
       setLinkText("");
       setShowRequeue(true);
       setUploadAlert({ message: "링크가 올라갔어요! 🎉", type: "success" });
-      loadStats();
+      refreshDashboard();
     } catch {
       setUploadAlert({ message: "연결에 실패했습니다. 네트워크를 확인해주세요.", type: "error" });
     } finally {
@@ -712,7 +761,7 @@ export default function HomePage() {
     setIsUrgent(false);
     setReceiving(false);
     setReceiveAlert(null);
-    loadStats();
+    refreshDashboard();
   }
 
   // ── Open received link (consume) ─────────────────────────────────────────────
@@ -885,10 +934,54 @@ export default function HomePage() {
                   : "flex flex-1 flex-col space-y-3"
               }
             >
-              {/* Stats */}
-              <button
-                onClick={loadStats}
-                className={`w-full rounded-2xl border border-[#ececec] bg-white flex items-center justify-center gap-2 shadow-sm transition-shadow hover:shadow-md active:bg-gray-50 ${
+              {/* 공지 */}
+              <div className="overflow-hidden rounded-2xl border border-[#ececec] bg-white shadow-sm">
+                <div className="flex items-center justify-between border-b border-[#f5e6e8] bg-gradient-to-r from-[#fff8f8] to-[#fffbfb] px-4 py-2.5">
+                  <span className="text-xs font-bold tracking-wide text-[#ff5a5f]">공지</span>
+                </div>
+                {announcements.length === 0 ? (
+                  <p className="px-4 py-5 text-center text-sm text-gray-400">
+                    등록된 공지가 없습니다
+                  </p>
+                ) : (
+                  <>
+                    <div
+                      role="tablist"
+                      aria-label="공지 탭"
+                      className="flex gap-1 overflow-x-auto border-b border-[#f0f0f0] bg-[#fafafa] px-2 py-2"
+                    >
+                      {announcements.map((a, i) => (
+                        <button
+                          key={a.id}
+                          type="button"
+                          role="tab"
+                          aria-selected={i === activeAnnIdx}
+                          onClick={() => setActiveAnnIdx(i)}
+                          className={`shrink-0 rounded-lg px-3 py-2 text-left text-xs font-medium transition-all ${
+                            i === activeAnnIdx
+                              ? "bg-white text-[#1a1a1a] shadow-sm ring-1 ring-[#ffd4d6]"
+                              : "text-gray-500 hover:bg-white/80 hover:text-[#1a1a1a]"
+                          }`}
+                        >
+                          <span className="line-clamp-1 max-w-[200px] sm:max-w-[280px]">{a.title}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="px-4 py-4" role="tabpanel">
+                      <p className="mb-2 text-[11px] text-gray-400">
+                        {formatAnnouncementDate(announcements[activeAnnIdx]!.createdAt)}
+                      </p>
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#1a1a1a]">
+                        {announcements[activeAnnIdx]!.body}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Stats (자동 새로고침: 주기·탭 복귀 시) */}
+              <div
+                className={`flex w-full items-center justify-center gap-2 rounded-2xl border border-[#ececec] bg-white shadow-sm ${
                   isDesktopLayout ? "p-5 lg:p-6" : "p-4"
                 }`}
               >
@@ -900,8 +993,7 @@ export default function HomePage() {
                 <span className={`text-gray-500 ${isDesktopLayout ? "text-base" : "text-sm"}`}>
                   개의 링크 대기 중
                 </span>
-                <span className="text-xs text-gray-300 ml-1">↻</span>
-              </button>
+              </div>
 
               {/* Upload card */}
               <div
