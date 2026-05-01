@@ -245,20 +245,42 @@ export async function getSettings(): Promise<{
   maintenanceMessage: string;
 }> {
   const db = getDb();
-  const row = await db
-    .prepare(
-      `SELECT maintenance_on AS maintenanceOn,
-              touched_at AS touchedAt,
-              IFNULL(maintenance_message, '') AS maintenanceMessage
-       FROM settings WHERE key = 'global'`
-    )
-    .first<{ maintenanceOn: number; touchedAt: number; maintenanceMessage: string }>();
+  try {
+    const row = await db
+      .prepare(
+        `SELECT maintenance_on AS maintenanceOn,
+                touched_at AS touchedAt,
+                IFNULL(maintenance_message, '') AS maintenanceMessage
+         FROM settings WHERE key = 'global'`
+      )
+      .first<{ maintenanceOn: number; touchedAt: number; maintenanceMessage: string }>();
 
-  return {
-    maintenanceOn: Boolean(row?.maintenanceOn ?? 0),
-    touchedAt: row?.touchedAt ?? 0,
-    maintenanceMessage: row?.maintenanceMessage ?? "",
-  };
+    return {
+      maintenanceOn: Boolean(row?.maintenanceOn ?? 0),
+      touchedAt: row?.touchedAt ?? 0,
+      maintenanceMessage: row?.maintenanceMessage ?? "",
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const missingCol =
+      /no such column/i.test(msg) ||
+      /maintenance_message/i.test(msg) ||
+      /does not exist/i.test(msg);
+    if (!missingCol) throw err;
+
+    const row = await db
+      .prepare(
+        `SELECT maintenance_on AS maintenanceOn, touched_at AS touchedAt
+         FROM settings WHERE key = 'global'`
+      )
+      .first<{ maintenanceOn: number; touchedAt: number }>();
+
+    return {
+      maintenanceOn: Boolean(row?.maintenanceOn ?? 0),
+      touchedAt: row?.touchedAt ?? 0,
+      maintenanceMessage: "",
+    };
+  }
 }
 
 /** 미들웨어 등: Worker 컨텍스트가 없으면 false (로컬 등). */
@@ -302,12 +324,26 @@ export async function updateMaintenanceMessage(message: string): Promise<void> {
   const db = getDb();
   const now = Date.now();
   const text = clampMaintenanceMessage(message);
-  await db
-    .prepare(
-      `UPDATE settings SET maintenance_message = ?, touched_at = ? WHERE key = 'global'`
-    )
-    .bind(text, now)
-    .run();
+  try {
+    await db
+      .prepare(
+        `UPDATE settings SET maintenance_message = ?, touched_at = ? WHERE key = 'global'`
+      )
+      .bind(text, now)
+      .run();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const missingCol =
+      /no such column/i.test(msg) ||
+      /maintenance_message/i.test(msg) ||
+      /does not exist/i.test(msg);
+    if (missingCol) {
+      throw new Error(
+        "D1에 migrations/0003_settings_maintenance_message.sql 을 한 번 실행해 주세요. (settings.maintenance_message 컬럼)"
+      );
+    }
+    throw err;
+  }
 }
 
 // ── Link helpers ──────────────────────────────────────────────────────────────

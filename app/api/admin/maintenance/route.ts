@@ -36,18 +36,24 @@ export async function POST(req: Request) {
     );
   }
 
-  if (hasOn) {
-    await setMaintenance(body.on as boolean);
-  }
-  if (hasMsg) {
-    await updateMaintenanceMessage(body.maintenanceMessage as string);
-  }
+  try {
+    if (hasOn) {
+      await setMaintenance(body.on as boolean);
+    }
+    if (hasMsg) {
+      await updateMaintenanceMessage(body.maintenanceMessage as string);
+    }
 
-  const s = await getSettings();
-  return NextResponse.json({
-    ok: true,
-    maintenanceOn: s.maintenanceOn,
-    touchedAt: s.touchedAt,
-    maintenanceMessage: s.maintenanceMessage,
-  });
+    const s = await getSettings();
+    return NextResponse.json({
+      ok: true,
+      maintenanceOn: s.maintenanceOn,
+      touchedAt: s.touchedAt,
+      maintenanceMessage: s.maintenanceMessage,
+    });
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "점검 설정을 저장하지 못했습니다.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

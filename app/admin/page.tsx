@@ -13,6 +13,16 @@ type Metrics = {
 
 type AlertState = { message: string; type: "error" | "success" | "info" } | null;
 
+async function readResponseJson<T>(res: Response): Promise<{ data: T | null; status: number }> {
+  const raw = await res.text();
+  if (!raw.trim()) return { data: null, status: res.status };
+  try {
+    return { data: JSON.parse(raw) as T, status: res.status };
+  } catch {
+    return { data: null, status: res.status };
+  }
+}
+
 function Alert({ state }: { state: AlertState }) {
   if (!state) return null;
   const styles = {
@@ -38,20 +48,38 @@ export default function AdminPage() {
 
   // Load current settings
   useEffect(() => {
-    fetch("/api/settings")
-      .then((r) => r.json() as Promise<Partial<Settings>>)
-      .then((d) => {
+    (async () => {
+      try {
+        const res = await fetch("/api/settings");
+        const { data: d } = await readResponseJson<
+          Partial<Settings> & { error?: string }
+        >(res);
+        if (!res.ok) {
+          setAlert({
+            message: d?.error ?? `설정을 불러오지 못했습니다. (HTTP ${res.status})`,
+            type: "error",
+          });
+          return;
+        }
+        if (!d) {
+          setAlert({
+            message: `설정 응답을 읽을 수 없습니다. (HTTP ${res.status})`,
+            type: "error",
+          });
+          return;
+        }
         setSettings({
           maintenanceOn: Boolean(d.maintenanceOn),
           touchedAt: d.touchedAt ?? 0,
           maintenanceMessage: typeof d.maintenanceMessage === "string" ? d.maintenanceMessage : "",
         });
         if (typeof d.maintenanceMessage === "string") setMaintenanceMsg(d.maintenanceMessage);
-      })
-      .catch(() =>
-        setAlert({ message: "설정을 불러오지 못했습니다.", type: "error" })
-      )
-      .finally(() => setLoading(false));
+      } catch {
+        setAlert({ message: "네트워크 오류가 발생했습니다.", type: "error" });
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   async function toggleMaintenance(next: boolean) {
@@ -74,16 +102,19 @@ export default function AdminPage() {
           ...(next ? { maintenanceMessage: maintenanceMsg } : {}),
         }),
       });
-      const data = (await res.json()) as {
+      const { data } = await readResponseJson<{
         ok?: boolean;
         error?: string;
         maintenanceOn?: boolean;
         touchedAt?: number;
         maintenanceMessage?: string;
-      };
+      }>(res);
 
-      if (!res.ok || !data.ok) {
-        setAlert({ message: data.error ?? "업데이트 실패", type: "error" });
+      if (!data || !res.ok || !data.ok) {
+        setAlert({
+          message: data?.error ?? `업데이트 실패 (HTTP ${res.status})`,
+          type: "error",
+        });
         return;
       }
 
@@ -119,15 +150,18 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password, maintenanceMessage: maintenanceMsg }),
       });
-      const data = (await res.json()) as {
+      const { data } = await readResponseJson<{
         ok?: boolean;
         error?: string;
         maintenanceOn?: boolean;
         touchedAt?: number;
         maintenanceMessage?: string;
-      };
-      if (!res.ok || !data.ok) {
-        setAlert({ message: data.error ?? "저장 실패", type: "error" });
+      }>(res);
+      if (!data || !res.ok || !data.ok) {
+        setAlert({
+          message: data?.error ?? `저장 실패 (HTTP ${res.status})`,
+          type: "error",
+        });
         return;
       }
       setSettings((prev) =>
@@ -164,10 +198,15 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
       });
-      const data = (await res.json()) as { ok?: boolean; error?: string; metrics?: Metrics };
+      const { data } = await readResponseJson<{ ok?: boolean; error?: string; metrics?: Metrics }>(
+        res
+      );
 
-      if (!res.ok || !data.ok) {
-        setAlert({ message: data.error ?? "통계 조회 실패", type: "error" });
+      if (!data || !res.ok || !data.ok) {
+        setAlert({
+          message: data?.error ?? `통계 조회 실패 (HTTP ${res.status})`,
+          type: "error",
+        });
         return;
       }
 
