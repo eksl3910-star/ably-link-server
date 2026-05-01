@@ -530,7 +530,6 @@ export default function HomePage() {
 
   const isDesktopLayout =
     layoutPref === "desktop" || (layoutPref === "auto" && mediaDesktop);
-  const useTwoColumn = isDesktopLayout && mediaDesktop;
 
   // ── Logout ──────────────────────────────────────────────────────────────────
 
@@ -881,14 +880,11 @@ export default function HomePage() {
           >
             <div
               className={
-                useTwoColumn
-                  ? "grid flex-1 grid-cols-2 gap-6 lg:gap-8 xl:gap-10"
-                  : isDesktopLayout
-                    ? "flex flex-1 flex-col space-y-5"
-                    : "flex flex-1 flex-col space-y-3"
+                isDesktopLayout
+                  ? "flex flex-1 flex-col space-y-5"
+                  : "flex flex-1 flex-col space-y-3"
               }
             >
-            <div className={useTwoColumn ? "flex flex-col gap-6" : "contents"}>
               {/* Stats */}
               <button
                 onClick={loadStats}
@@ -965,9 +961,7 @@ export default function HomePage() {
                   </div>
                 )}
               </div>
-            </div>
 
-            <div className={useTwoColumn ? "flex flex-col gap-6" : "contents"}>
               {/* Receive section */}
               {!claimedLink && (
                 <div>
@@ -1033,7 +1027,6 @@ export default function HomePage() {
                 </div>
               )}
             </div>
-          </div>
           </div>
 
           <div
