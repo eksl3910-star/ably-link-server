@@ -128,8 +128,11 @@ export default function AdminPage() {
         <h1 className="text-2xl font-extrabold tracking-tight text-[#1f2430]">관리자</h1>
         <p className="mt-2 text-sm text-[#7c8394]">서버 점검 모드와 통계를 관리해요.</p>
         <p className="mt-1 text-xs text-[#9aa3b2]">
-          아래 비밀번호는 Cloudflare 환경 변수 <code className="text-[#1f2430]">ADMIN_TOGGLE_PASS</code>
-          (없으면 <code className="text-[#1f2430]">ADMIN_BASIC_PASS</code>)와 동일하게 입력하세요. 브라우저 로그인 창이 아닙니다.
+          이 페이지를 열 때 브라우저가 요청하는 아이디·비밀번호는{" "}
+          <code className="text-[#1f2430]">ADMIN_BASIC_USER</code> /{" "}
+          <code className="text-[#1f2430]">ADMIN_BASIC_PASS</code> 입니다. 아래 칸은 점검·통계 API용으로{" "}
+          <code className="text-[#1f2430]">ADMIN_TOGGLE_PASS</code>(없으면{" "}
+          <code className="text-[#1f2430]">ADMIN_BASIC_PASS</code>)와 같게 입력하세요.
         </p>
 
         {/* Password input */}
@@ -222,7 +225,9 @@ export default function AdminPage() {
         </div>
 
         <p className="mt-6 text-xs text-[#7c8394]">
-          점검 중에는 일반·로그인 화면이 모두 막히고 점검 안내만 보입니다. /admin 은 브라우저 Basic Auth 없이 이 비밀번호만으로 동작합니다.
+          점검 중에도 <code className="text-[#1f2430]">/admin</code> 화면과{" "}
+          <code className="text-[#1f2430]">/api/admin</code> 은 막지 않습니다. 화면은 Basic Auth + 아래 비밀번호
+          이중으로 보호됩니다.
         </p>
       </div>
     </main>

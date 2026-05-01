@@ -161,10 +161,10 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[var(--cream)] flex flex-col items-center justify-center px-6 py-10 relative">
+    <main className="relative flex min-h-screen flex-col items-center justify-center bg-[#f5f5f7] px-6 py-10">
       <Link
         href="/welcome"
-        className="absolute top-6 left-6 flex items-center gap-2 text-sm font-medium text-[#767676] transition-all duration-200 hover:text-[#1a1a1a] hover:-translate-x-0.5"
+        className="absolute left-6 top-6 flex items-center gap-2 text-sm font-medium text-gray-500 transition-all duration-200 hover:text-[#1a1a1a] hover:-translate-x-0.5"
       >
         <span aria-hidden>←</span>
         돌아가기
@@ -172,15 +172,12 @@ export default function LoginPage() {
 
       <div className="w-full max-w-sm als-enter">
         <div className="mb-8 flex justify-center">
-          <div
-            className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--accent-yellow)] shadow-lg shadow-[#f5e6a0]/50 transition-transform duration-200 hover:scale-105 sm:h-20 sm:w-20 sm:rounded-[1.25rem]"
-            style={{ color: "var(--warm-ink)" }}
-          >
-            <IconLink className="h-8 w-8 sm:h-10 sm:w-10" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#fff0f0] shadow-md shadow-[#ff5a5f]/15 transition-transform duration-200 hover:scale-105 sm:h-20 sm:w-20 sm:rounded-[1.25rem]">
+            <IconLink className="h-8 w-8 text-[#ff5a5f] sm:h-10 sm:w-10" />
           </div>
         </div>
 
-        <div className="mb-8 flex rounded-2xl bg-[#f3ead0]/60 p-1.5">
+        <div className="mb-8 flex rounded-2xl bg-[#ececec] p-1.5">
           {(["login", "register"] as Tab[]).map((t) => (
             <button
               key={t}
@@ -192,8 +189,8 @@ export default function LoginPage() {
               }}
               className={`flex-1 rounded-xl py-3.5 text-sm font-semibold transition-all duration-200 ${
                 tab === t
-                  ? "bg-white text-[#1a1a1a] shadow-md"
-                  : "text-[#767676] hover:text-[#1a1a1a]"
+                  ? "bg-white text-[#1a1a1a] shadow-sm"
+                  : "text-gray-500 hover:text-[#1a1a1a]"
               }`}
             >
               {t === "login" ? "로그인" : "회원가입"}
@@ -205,19 +202,19 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold text-[#1a1a1a] sm:text-3xl">
             {tab === "login" ? "로그인" : "회원가입"}
           </h1>
-          <p className="mt-2 text-sm text-[#767676] sm:text-base">
+          <p className="mt-2 text-sm text-gray-500 sm:text-base">
             {tab === "login" ? "계정에 로그인하세요" : "새로운 계정을 만들어보세요"}
           </p>
         </div>
 
-        <div className="rounded-2xl border border-[#ede8dc] bg-white/80 p-6 shadow-sm backdrop-blur-sm">
+        <div className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
           <Alert state={alert} />
 
           <form onSubmit={(e) => void handleSubmit(e)} className="space-y-5">
             <div className="space-y-2">
               <label className="text-sm font-semibold text-[#1a1a1a]">닉네임</label>
               <div className="group relative">
-                <IconUser className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#9ca3af] transition-colors duration-200 group-focus-within:text-[#b08d2b]" />
+                <IconUser className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 transition-colors duration-200 group-focus-within:text-[#ff5a5f]" />
                 <input
                   type="text"
                   autoComplete="username"
@@ -226,7 +223,7 @@ export default function LoginPage() {
                   onChange={(e) => setNickname(e.target.value)}
                   placeholder="닉네임을 입력하세요"
                   maxLength={20}
-                  className="h-14 w-full rounded-full border border-[#e8e2d4] bg-[#fffdf8] pl-12 pr-4 text-sm outline-none transition-all duration-200 placeholder:text-[#b0b0b0] focus:border-[#d4bc6a] focus:bg-white"
+                  className="h-14 w-full rounded-full border border-[#e5e7eb] bg-white pl-12 pr-4 text-sm outline-none transition-all duration-200 placeholder:text-gray-300 focus:border-[#ff5a5f]"
                 />
               </div>
             </div>
@@ -234,7 +231,7 @@ export default function LoginPage() {
             <div className="space-y-2">
               <label className="text-sm font-semibold text-[#1a1a1a]">비밀번호</label>
               <div className="group relative">
-                <IconLock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#9ca3af] transition-colors duration-200 group-focus-within:text-[#b08d2b]" />
+                <IconLock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 transition-colors duration-200 group-focus-within:text-[#ff5a5f]" />
                 <input
                   type="password"
                   autoComplete={tab === "login" ? "current-password" : "new-password"}
@@ -243,7 +240,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="비밀번호를 입력하세요"
                   minLength={tab === "register" ? 8 : 1}
-                  className="h-14 w-full rounded-full border border-[#e8e2d4] bg-[#fffdf8] pl-12 pr-4 text-sm outline-none transition-all duration-200 placeholder:text-[#b0b0b0] focus:border-[#d4bc6a] focus:bg-white"
+                  className="h-14 w-full rounded-full border border-[#e5e7eb] bg-white pl-12 pr-4 text-sm outline-none transition-all duration-200 placeholder:text-gray-300 focus:border-[#ff5a5f]"
                 />
               </div>
             </div>
@@ -255,7 +252,7 @@ export default function LoginPage() {
             >
               <label className="text-sm font-semibold text-[#1a1a1a]">비밀번호 확인</label>
               <div className="group relative">
-                <IconLock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#9ca3af] transition-colors duration-200 group-focus-within:text-[#b08d2b]" />
+                <IconLock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 transition-colors duration-200 group-focus-within:text-[#ff5a5f]" />
                 <input
                   type="password"
                   autoComplete="new-password"
@@ -264,7 +261,7 @@ export default function LoginPage() {
                   onChange={(e) => setPasswordConfirm(e.target.value)}
                   placeholder="비밀번호를 다시 입력하세요"
                   minLength={8}
-                  className="h-14 w-full rounded-full border border-[#e8e2d4] bg-[#fffdf8] pl-12 pr-4 text-sm outline-none transition-all duration-200 placeholder:text-[#b0b0b0] focus:border-[#d4bc6a] focus:bg-white"
+                  className="h-14 w-full rounded-full border border-[#e5e7eb] bg-white pl-12 pr-4 text-sm outline-none transition-all duration-200 placeholder:text-gray-300 focus:border-[#ff5a5f]"
                 />
               </div>
               {tab === "register" && passwordConfirm && password !== passwordConfirm ? (
@@ -282,9 +279,9 @@ export default function LoginPage() {
                   type="checkbox"
                   checked={keepLoggedIn}
                   onChange={(e) => setKeepLoggedIn(e.target.checked)}
-                  className="h-4 w-4 rounded border-[#d4bc6a] text-[#c9a227] accent-[#d4a00a] transition-transform duration-200"
+                  className="h-4 w-4 rounded border-gray-300 accent-[#ff5a5f] transition-transform duration-200"
                 />
-                <span className="text-sm text-[#767676] transition-colors duration-200 hover:text-[#1a1a1a]">
+                <span className="text-sm text-gray-500 transition-colors duration-200 hover:text-[#1a1a1a]">
                   로그인 유지하기
                 </span>
               </label>
@@ -293,7 +290,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="h-14 w-full rounded-2xl bg-[var(--accent-yellow)] text-base font-bold text-[var(--warm-ink)] shadow-lg shadow-[#f5e6a0]/45 transition-all duration-200 hover:shadow-xl hover:shadow-[#f0dc8f]/55 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              className="h-14 w-full rounded-2xl bg-[#ff5a5f] text-base font-bold text-white shadow-lg shadow-[#ff5a5f]/30 transition-all duration-200 hover:bg-[#e04448] hover:shadow-xl hover:shadow-[#ff5a5f]/35 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               {loading ? "처리 중..." : tab === "login" ? "로그인" : "회원가입"}
             </button>

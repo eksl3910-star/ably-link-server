@@ -251,7 +251,7 @@ function WithdrawConfirmModal({
 
         <div className="mb-6 space-y-3">
           <p className="text-sm font-medium text-[#1a1a1a]">탈퇴를 진행하려면 아래 문구를 입력하세요:</p>
-          <p className="rounded-xl bg-[#fdf6d9] p-3 text-sm font-medium text-[#5c4d2c]">
+          <p className="rounded-xl bg-[#fff0f0] p-3 text-sm font-medium text-[#1a1a1a]">
             {WITHDRAW_CONFIRM_PHRASE}
           </p>
           <input
@@ -275,7 +275,7 @@ function WithdrawConfirmModal({
               onClose();
               setPhrase("");
             }}
-            className="h-12 flex-1 rounded-xl bg-[#fdf6d9] text-sm font-semibold text-[#2c2419] transition-all duration-200 hover:bg-[#f5ebb3] active:scale-[0.98]"
+            className="h-12 flex-1 rounded-xl bg-[#f5f5f5] text-sm font-semibold text-[#1a1a1a] transition-all duration-200 hover:bg-[#ebebeb] active:scale-[0.98]"
           >
             취소
           </button>
@@ -637,7 +637,7 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => setShowGuide(true)}
-                className="flex h-10 w-10 items-center justify-center rounded-xl text-[#767676] transition-all duration-200 hover:bg-[#fdf6d9]/80 hover:text-[#1a1a1a] active:scale-95"
+                className="flex h-10 w-10 items-center justify-center rounded-xl text-[#767676] transition-all duration-200 hover:bg-[#fff0f0] hover:text-[#1a1a1a] active:scale-95"
                 title="사용방법"
                 aria-label="사용방법"
               >
@@ -654,7 +654,7 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => void handleLogout()}
-                className="flex h-10 w-10 items-center justify-center rounded-xl text-[#767676] transition-all duration-200 hover:bg-[#fdf6d9]/80 hover:text-[#1a1a1a] active:scale-95"
+                className="flex h-10 w-10 items-center justify-center rounded-xl text-[#767676] transition-all duration-200 hover:bg-[#fff0f0] hover:text-[#1a1a1a] active:scale-95"
                 title="로그아웃"
                 aria-label="로그아웃"
               >

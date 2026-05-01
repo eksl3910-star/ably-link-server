@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { SESSION_COOKIE } from "@/lib/constants";
+import { verifyAdminBasicAuthHeader } from "@/lib/admin-basic-auth";
 import { getMaintenanceOnSafe } from "@/lib/database";
 
 // ── Path classifiers ──────────────────────────────────────────────────────────
@@ -12,6 +13,11 @@ function isMaintenanceExempt(pathname: string): boolean {
   if (pathname.startsWith("/api/admin")) return true;
   if (pathname === "/api/settings" || pathname.startsWith("/api/settings/")) return true;
   return false;
+}
+
+/** 관리자 화면(HTML)만 — /api/admin 은 제외(페이지 내 fetch 가 Authorization 을 유지하지 않음). */
+function isAdminPagePath(pathname: string): boolean {
+  return pathname === "/admin" || pathname.startsWith("/admin/");
 }
 
 function isProtectedUserRoute(pathname: string): boolean {
@@ -61,6 +67,26 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
       homeUrl.pathname = "/";
       homeUrl.search = "";
       return NextResponse.redirect(homeUrl);
+    }
+  }
+
+  if (isAdminPagePath(pathname)) {
+    const basicUser = process.env.ADMIN_BASIC_USER ?? "";
+    const basicPass = process.env.ADMIN_BASIC_PASS ?? "";
+    const dev = process.env.NODE_ENV === "development";
+    if (!basicUser || !basicPass) {
+      if (!dev) {
+        return new NextResponse(
+          "ADMIN_BASIC_USER / ADMIN_BASIC_PASS 가 설정되지 않았습니다. Cloudflare 환경 변수를 확인하세요.",
+          { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } }
+        );
+      }
+      /* 로컬(next dev)에서 env 미설정 시 Basic 생략 — 프로덕션에서는 반드시 설정 */
+    } else if (!verifyAdminBasicAuthHeader(req.headers.get("authorization"), basicUser, basicPass)) {
+      return new NextResponse("Unauthorized", {
+        status: 401,
+        headers: { "WWW-Authenticate": 'Basic realm="ably-admin", charset="UTF-8"' },
+      });
     }
   }
 

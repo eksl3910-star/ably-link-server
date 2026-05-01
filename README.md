@@ -44,11 +44,12 @@ npx wrangler d1 execute ably-link-db --remote --file=./migrations/0002_users_nic
 
 | 변수 | 설명 |
 |------|------|
-| `ADMIN_TOGGLE_PASS` | **`/admin` 화면에 입력하는 관리자 비밀번호** (점검·통계 API 검증). 최우선으로 사용 |
-| `ADMIN_BASIC_PASS` | `ADMIN_TOGGLE_PASS`가 없을 때 위와 동일 용도로 사용 |
-| `ADMIN_BASIC_USER` | (선택) 예전 Basic Auth용. **현재 미들웨어에서는 사용하지 않음** |
+| `ADMIN_BASIC_USER` | **`/admin` 페이지**를 브라우저로 열 때 Basic Auth 아이디 (필수·프로덕션) |
+| `ADMIN_BASIC_PASS` | **`/admin` 페이지** Basic Auth 비밀번호 (필수·프로덕션) |
+| `ADMIN_TOGGLE_PASS` | 관리자 화면 **폼**에서 점검·통계 API에 넣는 비밀번호. 없으면 `ADMIN_BASIC_PASS`로 검증 |
 
-`/admin`은 브라우저 Basic Auth 없이 열립니다. **반드시 긴 `ADMIN_TOGGLE_PASS`를 설정**하고, 화면의 「관리자 비밀번호」에 그 값을 입력하세요. (Basic Auth 이중 인증은 `fetch`가 헤더를 안 붙여 무한 로그인 창이 나는 문제가 있어 제거했습니다.)
+- **`/admin` HTML**만 미들웨어에서 Basic Auth를 요구합니다. **`/api/admin/*`** 에는 Basic을 걸지 않습니다(페이지 안 `fetch`가 `Authorization`을 붙이지 않아 무한 로그인이 나는 문제 방지). API는 기존처럼 POST body의 `password`로만 검증합니다.
+- 로컬 `next dev`에서는 `ADMIN_BASIC_*` 가 비어 있으면 Basic을 건너뜁니다. 프로덕션(Pages)에서는 둘 다 설정하세요.
 
 ## 배포
 
