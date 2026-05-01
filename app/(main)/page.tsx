@@ -423,6 +423,7 @@ export default function HomePage() {
   const [stats, setStats] = useState<LinkStats>({ total: 0, mine: 0 });
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [activeAnnIdx, setActiveAnnIdx] = useState(0);
+  const [announcementOpen, setAnnouncementOpen] = useState(true);
 
   // Upload section
   const [linkText, setLinkText] = useState("");
@@ -936,47 +937,71 @@ export default function HomePage() {
             >
               {/* 공지 */}
               <div className="overflow-hidden rounded-2xl border border-[#ececec] bg-white shadow-sm">
-                <div className="flex items-center justify-between border-b border-[#f5e6e8] bg-gradient-to-r from-[#fff8f8] to-[#fffbfb] px-4 py-2.5">
+                <button
+                  type="button"
+                  onClick={() => setAnnouncementOpen((o) => !o)}
+                  aria-expanded={announcementOpen}
+                  aria-label={announcementOpen ? "공지 접기" : "공지 펼치기"}
+                  className={`flex w-full items-center justify-between bg-gradient-to-r from-[#fff8f8] to-[#fffbfb] px-4 py-2.5 text-left transition-colors hover:from-[#fff3f3] hover:to-[#fff8f8] ${
+                    announcementOpen ? "border-b border-[#f5e6e8]" : ""
+                  }`}
+                >
                   <span className="text-xs font-bold tracking-wide text-[#ff5a5f]">공지</span>
-                </div>
-                {announcements.length === 0 ? (
-                  <p className="px-4 py-5 text-center text-sm text-gray-400">
-                    등록된 공지가 없습니다
-                  </p>
-                ) : (
-                  <>
-                    <div
-                      role="tablist"
-                      aria-label="공지 탭"
-                      className="flex gap-1 overflow-x-auto border-b border-[#f0f0f0] bg-[#fafafa] px-2 py-2"
-                    >
-                      {announcements.map((a, i) => (
-                        <button
-                          key={a.id}
-                          type="button"
-                          role="tab"
-                          aria-selected={i === activeAnnIdx}
-                          onClick={() => setActiveAnnIdx(i)}
-                          className={`shrink-0 rounded-lg px-3 py-2 text-left text-xs font-medium transition-all ${
-                            i === activeAnnIdx
-                              ? "bg-white text-[#1a1a1a] shadow-sm ring-1 ring-[#ffd4d6]"
-                              : "text-gray-500 hover:bg-white/80 hover:text-[#1a1a1a]"
-                          }`}
-                        >
-                          <span className="line-clamp-1 max-w-[200px] sm:max-w-[280px]">{a.title}</span>
-                        </button>
-                      ))}
-                    </div>
-                    <div className="px-4 py-4" role="tabpanel">
-                      <p className="mb-2 text-[11px] text-gray-400">
-                        {formatAnnouncementDate(announcements[activeAnnIdx]!.createdAt)}
-                      </p>
-                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#1a1a1a]">
-                        {announcements[activeAnnIdx]!.body}
-                      </p>
-                    </div>
-                  </>
-                )}
+                  <svg
+                    className={`h-4 w-4 shrink-0 text-[#ff5a5f] transition-transform duration-200 ${
+                      announcementOpen ? "rotate-180" : ""
+                    }`}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
+                {announcementOpen ? (
+                  announcements.length === 0 ? (
+                    <p className="px-4 py-5 text-center text-sm text-gray-400">
+                      등록된 공지가 없습니다
+                    </p>
+                  ) : (
+                    <>
+                      <div
+                        role="tablist"
+                        aria-label="공지 탭"
+                        className="flex gap-1 overflow-x-auto border-b border-[#f0f0f0] bg-[#fafafa] px-2 py-2"
+                      >
+                        {announcements.map((a, i) => (
+                          <button
+                            key={a.id}
+                            type="button"
+                            role="tab"
+                            aria-selected={i === activeAnnIdx}
+                            onClick={() => setActiveAnnIdx(i)}
+                            className={`shrink-0 rounded-lg px-3 py-2 text-left text-xs font-medium transition-all ${
+                              i === activeAnnIdx
+                                ? "bg-white text-[#1a1a1a] shadow-sm ring-1 ring-[#ffd4d6]"
+                                : "text-gray-500 hover:bg-white/80 hover:text-[#1a1a1a]"
+                            }`}
+                          >
+                            <span className="line-clamp-1 max-w-[200px] sm:max-w-[280px]">{a.title}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="px-4 py-4" role="tabpanel">
+                        <p className="mb-2 text-[11px] text-gray-400">
+                          {formatAnnouncementDate(announcements[activeAnnIdx]!.createdAt)}
+                        </p>
+                        <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#1a1a1a]">
+                          {announcements[activeAnnIdx]!.body}
+                        </p>
+                      </div>
+                    </>
+                  )
+                ) : null}
               </div>
 
               {/* Stats (자동 새로고침: 주기·탭 복귀 시) */}
