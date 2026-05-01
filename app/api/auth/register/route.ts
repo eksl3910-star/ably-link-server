@@ -46,7 +46,7 @@ export async function POST(req: Request) {
 
     const { hash, salt } = await deriveKey(password);
     const user = await insertUser(nickname, hash, salt);
-    await issueSession(user.id);
+    await issueSession(user.id, { rememberMe: true });
 
     return NextResponse.json({ ok: true, user: { id: user.id, nickname: user.nickname } });
   } catch (err) {

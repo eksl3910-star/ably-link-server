@@ -185,12 +185,13 @@ export async function removeUserAndData(userId: string): Promise<void> {
 // ── Session ───────────────────────────────────────────────────────────────────
 
 export async function createSession(
-  userId: string
+  userId: string,
+  ttlMs: number = SESSION_TTL_MS
 ): Promise<{ id: string; validUntil: number }> {
   const db = getDb();
   const now = Date.now();
   const id = crypto.randomUUID();
-  const validUntil = now + SESSION_TTL_MS;
+  const validUntil = now + ttlMs;
 
   await db
     .prepare(

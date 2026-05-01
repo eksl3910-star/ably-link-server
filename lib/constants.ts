@@ -1,8 +1,11 @@
 // Session cookie name — different from reference "ably_session"
 export const SESSION_COOKIE = "als_token";
 
-// Session validity: 14 days in milliseconds
+// Session validity: 14 days (로그인 유지 체크 시)
 export const SESSION_TTL_MS = 14 * 24 * 60 * 60 * 1000;
+
+// 로그인 유지 미체크: 브라우저 닫으면 쿠키 삭제 + 서버 세션도 짧게
+export const SESSION_TTL_SHORT_MS = 24 * 60 * 60 * 1000;
 
 // Claim window for a received link: 5 seconds
 export const CLAIM_WINDOW_MS = 5_000;

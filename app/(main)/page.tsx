@@ -41,9 +41,17 @@ function Alert({ state }: { state: AlertState }) {
   );
 }
 
+const WITHDRAW_CONFIRM_PHRASE = "위 내용을 모두 이해했습니다";
+
 // ── Guide popup ───────────────────────────────────────────────────────────────
 
-function GuidePopup({ onClose }: { onClose: () => void }) {
+function GuidePopup({
+  onClose,
+  onRequestWithdraw,
+}: {
+  onClose: () => void;
+  onRequestWithdraw: () => void;
+}) {
   const handleDontShow = () => {
     localStorage.setItem("als_guide_done", "1");
     onClose();
@@ -51,15 +59,19 @@ function GuidePopup({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 als-backdrop-enter"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-white rounded-t-3xl p-6 pb-9 w-full max-w-[480px] max-h-[85vh] overflow-y-auto">
+      <div
+        className="als-modal-enter w-full max-w-[480px] max-h-[85vh] overflow-y-auto rounded-t-3xl bg-white p-6 pb-9 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-[#1a1a1a]">사용방법</h2>
           <button
+            type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-[#f0f0f0] flex items-center justify-center text-base"
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#f5f5f5] text-base text-[#666] transition-all duration-200 hover:bg-[#ebebeb] hover:rotate-90"
           >
             ✕
           </button>
@@ -114,18 +126,168 @@ function GuidePopup({ onClose }: { onClose: () => void }) {
           ))}
         </div>
 
+        <div className="mt-6 border-t border-[#f0f0f0] pt-5">
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              onRequestWithdraw();
+            }}
+            className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-medium text-[#767676] transition-all duration-200 hover:bg-red-50 hover:text-red-600"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+            계정 탈퇴하기
+          </button>
+        </div>
+
         <button
+          type="button"
           onClick={handleDontShow}
-          className="w-full h-12 rounded-xl bg-[#1a1a1a] text-white font-semibold text-sm mb-2"
+          className="mb-2 mt-4 h-12 w-full rounded-xl bg-[#1a1a1a] text-sm font-semibold text-white transition-all duration-200 hover:opacity-90 active:scale-[0.99]"
         >
           다시 보지 않기
         </button>
         <button
+          type="button"
           onClick={onClose}
-          className="w-full h-10 rounded-xl bg-[#f5f5f5] text-gray-500 text-sm"
+          className="h-10 w-full rounded-xl bg-[#f5f5f5] text-sm text-gray-500 transition-all duration-200 hover:bg-[#ebebeb] active:scale-[0.99]"
         >
           닫기
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Withdraw confirm modal ────────────────────────────────────────────────────
+
+function WithdrawConfirmModal({
+  onClose,
+  onSuccess,
+}: {
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [phrase, setPhrase] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const canSubmit = phrase === WITHDRAW_CONFIRM_PHRASE;
+
+  async function handleWithdraw() {
+    if (!canSubmit || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/auth/delete", { method: "DELETE" });
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        setError(j.error ?? "탈퇴 처리에 실패했습니다.");
+        return;
+      }
+      onSuccess();
+    } catch {
+      setError("네트워크 오류가 발생했습니다.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/45 als-backdrop-enter"
+        aria-label="닫기"
+        onClick={() => {
+          onClose();
+          setPhrase("");
+        }}
+      />
+      <div
+        className="als-modal-enter relative w-full max-w-md rounded-[1.5rem] border border-[#f0f0f0] bg-white p-6 shadow-2xl sm:p-8"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="withdraw-title"
+      >
+        <button
+          type="button"
+          onClick={() => {
+            onClose();
+            setPhrase("");
+          }}
+          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-xl text-[#888] transition-all duration-200 hover:bg-[#f5f5f5] hover:text-[#1a1a1a] hover:rotate-90 sm:right-5 sm:top-5"
+        >
+          ✕
+        </button>
+
+        <div className="mb-6 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#ffe8ec]">
+            <svg className="h-7 w-7 text-[#e04d5c]" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
+          <h2 id="withdraw-title" className="text-xl font-bold text-[#1a1a1a] sm:text-2xl">
+            정말로 탈퇴하시겠습니까?
+          </h2>
+        </div>
+
+        <div className="mb-6 rounded-xl bg-[#fff0f2] p-4">
+          <p className="text-sm leading-relaxed text-[#c0392b]">
+            탈퇴하시면 지금까지 저장된 모든 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+          </p>
+        </div>
+
+        <div className="mb-6 space-y-3">
+          <p className="text-sm font-medium text-[#1a1a1a]">탈퇴를 진행하려면 아래 문구를 입력하세요:</p>
+          <p className="rounded-xl bg-[#fdf6d9] p-3 text-sm font-medium text-[#5c4d2c]">
+            {WITHDRAW_CONFIRM_PHRASE}
+          </p>
+          <input
+            type="text"
+            value={phrase}
+            onChange={(e) => setPhrase(e.target.value)}
+            placeholder="문구를 입력하세요"
+            className="h-12 w-full rounded-xl border border-[#e8e2d4] bg-[#fffdf8] px-4 text-sm outline-none transition-all duration-200 placeholder:text-[#b0b0b0] focus:border-[#d4bc6a]"
+            autoComplete="off"
+          />
+        </div>
+
+        {error ? (
+          <p className="mb-4 text-center text-sm text-red-600">{error}</p>
+        ) : null}
+
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              setPhrase("");
+            }}
+            className="h-12 flex-1 rounded-xl bg-[#fdf6d9] text-sm font-semibold text-[#2c2419] transition-all duration-200 hover:bg-[#f5ebb3] active:scale-[0.98]"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            disabled={!canSubmit || busy}
+            onClick={() => void handleWithdraw()}
+            className="h-12 flex-1 rounded-xl bg-[#e85d6c] text-sm font-semibold text-white shadow-md shadow-red-200/50 transition-all duration-200 hover:bg-[#d64a5a] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none active:scale-[0.98]"
+          >
+            {busy ? "처리 중..." : "탈퇴하기"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -160,6 +322,7 @@ export default function HomePage() {
 
   // Guide popup
   const [showGuide, setShowGuide] = useState(false);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -195,10 +358,10 @@ export default function HomePage() {
         if (d.ok && d.user) {
           setUser(d.user);
         } else {
-          router.replace("/login");
+          router.replace("/welcome");
         }
       } catch {
-        if (!cancelled) router.replace("/login");
+        if (!cancelled) router.replace("/welcome");
       } finally {
         if (!cancelled) setAuthLoading(false);
       }
@@ -241,17 +404,7 @@ export default function HomePage() {
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-  }
-
-  // ── Delete account ──────────────────────────────────────────────────────────
-
-  async function handleDeleteAccount() {
-    if (!confirm("정말로 계정을 삭제하시겠어요? 내 링크도 모두 삭제됩니다.")) return;
-    const res = await fetch("/api/auth/delete", { method: "DELETE" });
-    if (res.ok) {
-      router.push("/login");
-    }
+    router.push("/welcome");
   }
 
   // ── Submit link ─────────────────────────────────────────────────────────────
@@ -475,23 +628,45 @@ export default function HomePage() {
         <div className="max-w-[480px] mx-auto pb-10">
 
           {/* Top bar */}
-          <header className="bg-white border-b border-[#e8e8e8] px-5 py-4 flex items-center justify-between sticky top-0 z-10">
+          <header className="sticky top-0 z-10 flex items-center justify-between border-b border-[#e8e8e8] bg-white px-5 py-4">
             <h1 className="text-base font-semibold text-[#1a1a1a]">에이블리 링크 교환</h1>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-400">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="max-w-[64px] truncate text-[10px] text-gray-400 sm:max-w-[88px] sm:text-xs">
                 {user?.nickname}
               </span>
               <button
+                type="button"
                 onClick={() => setShowGuide(true)}
-                className="border border-[#e0e0e0] rounded-full px-3 py-1 text-xs text-gray-500 hover:bg-gray-50"
+                className="flex h-10 w-10 items-center justify-center rounded-xl text-[#767676] transition-all duration-200 hover:bg-[#fdf6d9]/80 hover:text-[#1a1a1a] active:scale-95"
+                title="사용방법"
+                aria-label="사용방법"
               >
-                사용방법
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+                  <path
+                    d="M12 16v-1M12 8v5"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
               </button>
               <button
+                type="button"
                 onClick={() => void handleLogout()}
-                className="text-xs text-gray-400 hover:text-gray-600"
+                className="flex h-10 w-10 items-center justify-center rounded-xl text-[#767676] transition-all duration-200 hover:bg-[#fdf6d9]/80 hover:text-[#1a1a1a] active:scale-95"
+                title="로그아웃"
+                aria-label="로그아웃"
               >
-                로그아웃
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path
+                    d="M15 3h4a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1h-4M10 17l5-5-5-5M15 12H3"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </button>
             </div>
           </header>
@@ -598,21 +773,26 @@ export default function HomePage() {
               </div>
             )}
 
-            {/* Account management */}
-            <div className="pt-2 pb-4">
-              <button
-                onClick={() => void handleDeleteAccount()}
-                className="w-full text-xs text-gray-300 hover:text-red-400 transition-colors py-2"
-              >
-                계정 탈퇴
-              </button>
-            </div>
-
           </div>
         </div>
       </div>
 
-      {showGuide && <GuidePopup onClose={() => setShowGuide(false)} />}
+      {showGuide ? (
+        <GuidePopup
+          onClose={() => setShowGuide(false)}
+          onRequestWithdraw={() => setShowWithdrawModal(true)}
+        />
+      ) : null}
+      {showWithdrawModal ? (
+        <WithdrawConfirmModal
+          onClose={() => setShowWithdrawModal(false)}
+          onSuccess={() => {
+            setShowWithdrawModal(false);
+            router.push("/welcome");
+            router.refresh();
+          }}
+        />
+      ) : null}
     </>
   );
 }

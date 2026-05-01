@@ -30,6 +30,18 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   const { pathname } = req.nextUrl;
   const maintenanceOn = await getMaintenanceOnSafe();
 
+  const hasSession = Boolean(req.cookies.get(SESSION_COOKIE)?.value);
+
+  if (
+    (pathname === "/welcome" || pathname.startsWith("/welcome/")) &&
+    hasSession
+  ) {
+    const homeUrl = req.nextUrl.clone();
+    homeUrl.pathname = "/";
+    homeUrl.search = "";
+    return NextResponse.redirect(homeUrl);
+  }
+
   if (maintenanceOn) {
     if (!isMaintenanceExempt(pathname)) {
       if (pathname.startsWith("/api/")) {
@@ -53,15 +65,14 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   }
 
   if (isProtectedUserRoute(pathname)) {
-    const hasSession = Boolean(req.cookies.get(SESSION_COOKIE)?.value);
     if (!hasSession) {
       if (pathname.startsWith("/api/")) {
         return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
       }
-      const loginUrl = req.nextUrl.clone();
-      loginUrl.pathname = "/login";
-      loginUrl.search = "";
-      return NextResponse.redirect(loginUrl);
+      const welcomeUrl = req.nextUrl.clone();
+      welcomeUrl.pathname = "/welcome";
+      welcomeUrl.search = "";
+      return NextResponse.redirect(welcomeUrl);
     }
   }
 

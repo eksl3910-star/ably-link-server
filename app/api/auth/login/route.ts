@@ -6,7 +6,7 @@ import { issueSession } from "@/lib/session";
 export const runtime = "edge";
 
 export async function POST(req: Request) {
-  let body: { nickname?: unknown; password?: unknown } = {};
+  let body: { nickname?: unknown; password?: unknown; rememberMe?: unknown } = {};
   try {
     body = (await req.json()) as typeof body;
   } catch {
@@ -31,7 +31,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "닉네임 또는 비밀번호가 올바르지 않습니다." }, { status: 401 });
     }
 
-    await issueSession(user.id);
+    const rememberMe = body.rememberMe === true;
+    await issueSession(user.id, { rememberMe });
     return NextResponse.json({ ok: true, user: { id: user.id, nickname: user.nickname } });
   } catch (err) {
     const message =
