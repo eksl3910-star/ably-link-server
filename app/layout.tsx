@@ -21,60 +21,109 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               (() => {
-                const prevent = (e) => e.preventDefault();
-                document.addEventListener("contextmenu", prevent);
-                document.addEventListener("dragstart", prevent);
-                document.addEventListener("selectstart", prevent);
-
-                const root = document.documentElement;
-                let warned = false;
-                let opened = false;
                 const REDIRECT_URL = "https://www.naver.com";
+                const VIEWPORT_THRESHOLD = 150;
+                const RECHECK_MS = 700;
+                const REDIRECT_RETRY_MS = 900;
                 const REDIRECT_COOLDOWN_MS = 3000;
-                let redirecting = false;
+                let isLocked = false;
                 let lastRedirectAt = 0;
 
-                const setGuard = (on) => {
-                  opened = on;
-                  root.classList.toggle("als-devtools-open", on);
-                  if (on && !warned) {
-                    warned = true;
-                    alert("개발자 도구가 감지되었습니다. 보안 보호 모드가 활성화됩니다.");
-                  }
-                  if (on && !redirecting) {
-                    const now = Date.now();
-                    if (now - lastRedirectAt > REDIRECT_COOLDOWN_MS) {
-                      redirecting = true;
-                      lastRedirectAt = now;
-                      window.location.replace(REDIRECT_URL);
+                const blockBasicActions = () => {
+                  const prevent = (e) => e.preventDefault();
+                  document.addEventListener("contextmenu", prevent);
+                  document.addEventListener("dragstart", prevent);
+                  document.addEventListener("selectstart", prevent);
+                };
+
+                const tryRedirect = () => {
+                  const now = Date.now();
+                  if (now - lastRedirectAt < REDIRECT_COOLDOWN_MS) return;
+                  lastRedirectAt = now;
+                  window.location.replace(REDIRECT_URL);
+                };
+
+                const hardBlock = () => {
+                  isLocked = true;
+                  document.documentElement.classList.add("als-devtools-open");
+
+                  try {
+                    if (document.body) {
+                      document.body.innerHTML = "";
+                      document.body.style.display = "none";
                     }
-                  }
+                  } catch (_) {}
+
+                  tryRedirect();
                 };
 
-                const detect = () => {
-                  const wGap = window.outerWidth - window.innerWidth;
-                  const hGap = window.outerHeight - window.innerHeight;
-                  const maybeOpen = wGap > 160 || hGap > 160;
-                  setGuard(maybeOpen);
+                const triggerLock = () => {
+                  if (!isLocked) hardBlock();
                 };
 
-                window.addEventListener("resize", detect, { passive: true });
-                window.addEventListener("focus", detect, { passive: true });
-                setInterval(detect, 1200);
-                detect();
+                const detectViewportGap = () => {
+                  const wGap = Math.abs(window.outerWidth - window.innerWidth);
+                  const hGap = Math.abs(window.outerHeight - window.innerHeight);
+                  return wGap > VIEWPORT_THRESHOLD || hGap > VIEWPORT_THRESHOLD;
+                };
 
-                document.addEventListener("keydown", (e) => {
-                  const key = e.key.toLowerCase();
-                  const blocked =
-                    key === "f12" ||
-                    (e.ctrlKey && e.shiftKey && (key === "i" || key === "j" || key === "c")) ||
-                    (e.ctrlKey && key === "u");
-                  if (blocked) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (!opened) alert("해당 단축키는 사용할 수 없습니다.");
-                  }
+                const detectDevtools = () => {
+                  if (detectViewportGap()) triggerLock();
+                };
+
+                // 3중 감지 #2: console.dir getter trap
+                const trapTarget = {};
+                Object.defineProperty(trapTarget, "devtools", {
+                  get() {
+                    triggerLock();
+                    return "blocked";
+                  },
                 });
+
+                const runConsoleTrap = () => {
+                  try {
+                    console.dir(trapTarget);
+                  } catch (_) {}
+                };
+
+                // 3중 감지 #3: 단축키 감지
+                document.addEventListener(
+                  "keydown",
+                  (e) => {
+                    const key = (e.key || "").toLowerCase();
+                    const blocked =
+                      key === "f12" ||
+                      (e.ctrlKey && e.shiftKey && ["i", "j", "c", "k"].includes(key)) ||
+                      (e.ctrlKey && ["u", "s", "p"].includes(key));
+
+                    if (blocked || isLocked) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      e.stopImmediatePropagation();
+                    }
+
+                    if (blocked) triggerLock();
+                  },
+                  true
+                );
+
+                blockBasicActions();
+                window.addEventListener("resize", detectDevtools, { passive: true });
+                window.addEventListener("focus", detectDevtools, { passive: true });
+
+                setInterval(() => {
+                  detectDevtools();
+                  runConsoleTrap();
+                }, RECHECK_MS);
+
+                setInterval(() => {
+                  if (isLocked && window.location.href !== REDIRECT_URL) {
+                    tryRedirect();
+                  }
+                }, REDIRECT_RETRY_MS);
+
+                detectDevtools();
+                runConsoleTrap();
               })();
             `,
           }}
