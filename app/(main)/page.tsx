@@ -48,16 +48,26 @@ const CONTACT_KAKAO_URL = "https://open.kakao.com/o/sKsl7Tsi";
 const CONTACT_IG_ORIGINAL = "https://www.instagram.com/solitunnn/";
 const CONTACT_IG_CURRENT = "https://www.instagram.com/riikuuu0/";
 
+const LAYOUT_STORAGE_KEY = "als_layout_mode";
+type LayoutPref = "auto" | "mobile" | "desktop";
+
+function readStoredLayoutPref(): LayoutPref {
+  if (typeof window === "undefined") return "auto";
+  const raw = localStorage.getItem(LAYOUT_STORAGE_KEY);
+  if (raw === "mobile" || raw === "desktop" || raw === "auto") return raw;
+  return "auto";
+}
+
 // ── Contact / credits popup ───────────────────────────────────────────────────
 
 function ContactModal({ onClose }: { onClose: () => void }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 als-backdrop-enter"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 als-backdrop-enter md:items-center md:p-6"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="als-modal-enter w-full max-w-[480px] max-h-[85vh] overflow-y-auto rounded-t-3xl bg-white p-6 pb-9 shadow-2xl"
+        className="als-modal-enter w-full max-w-[480px] max-h-[85vh] overflow-y-auto rounded-t-3xl bg-white p-6 pb-9 shadow-2xl md:max-h-[min(90vh,720px)] md:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">
@@ -100,8 +110,7 @@ function ContactModal({ onClose }: { onClose: () => void }) {
           <div className="rounded-xl border-2 border-[#ff5a5f] bg-[#fff0f0] px-4 py-3 text-[#1a1a1a]">
             <p className="text-xs font-bold text-[#ff5a5f]">문의 안내</p>
             <p className="mt-2 leading-relaxed">
-              모든 문의는 <strong>제작자(riikuuu0)</strong>에게만 부탁드려요. 원제작자(solitunnn)에게는 보내지 말아
-              주세요.
+              모든 문의는 제작자(riikuuu0)에게만 부탁드립니다.
             </p>
             <p className="mt-2 text-xs text-gray-600 leading-relaxed">
               문의 방법: 인스타그램 DM 또는 아래 카카오 오픈채팅
@@ -155,11 +164,11 @@ function GuidePopup({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 als-backdrop-enter"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 als-backdrop-enter md:items-center md:p-6"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="als-modal-enter w-full max-w-[480px] max-h-[85vh] overflow-y-auto rounded-t-3xl bg-white p-6 pb-9 shadow-2xl"
+        className="als-modal-enter w-full max-w-[480px] max-h-[85vh] overflow-y-auto rounded-t-3xl bg-white p-6 pb-9 shadow-2xl md:max-h-[min(90vh,720px)] md:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">
@@ -421,6 +430,8 @@ export default function HomePage() {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showContact, setShowContact] = useState(false);
   const [requeueBusy, setRequeueBusy] = useState(false);
+  const [layoutPref, setLayoutPref] = useState<LayoutPref>("auto");
+  const [mediaDesktop, setMediaDesktop] = useState(false);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const requeueLastAtRef = useRef(0);
@@ -498,6 +509,28 @@ export default function HomePage() {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    setLayoutPref(readStoredLayoutPref());
+    const mq = window.matchMedia("(min-width: 768px)");
+    const onChange = () => setMediaDesktop(mq.matches);
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  const setLayoutPreference = useCallback((pref: LayoutPref) => {
+    setLayoutPref(pref);
+    try {
+      localStorage.setItem(LAYOUT_STORAGE_KEY, pref);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const isDesktopLayout =
+    layoutPref === "desktop" || (layoutPref === "auto" && mediaDesktop);
+  const useTwoColumn = isDesktopLayout && mediaDesktop;
 
   // ── Logout ──────────────────────────────────────────────────────────────────
 
@@ -741,16 +774,42 @@ export default function HomePage() {
     );
   }
 
+  const layoutPill = (active: boolean) =>
+    active
+      ? "border-[#ff5a5f] bg-[#fff5f5] text-[#ff5a5f]"
+      : "border-[#e5e7eb] bg-white text-gray-600 hover:bg-gray-50";
+
   return (
     <>
       <div className="min-h-screen bg-[#f5f5f7]">
-        <div className="max-w-[480px] mx-auto pb-10">
-
+        <div
+          className={
+            isDesktopLayout
+              ? "max-w-3xl lg:max-w-5xl mx-auto pb-10"
+              : "max-w-[480px] mx-auto pb-10"
+          }
+        >
           {/* Top bar */}
-          <header className="sticky top-0 z-10 flex items-center justify-between border-b border-[#e8e8e8] bg-white px-5 py-4">
-            <h1 className="text-base font-semibold text-[#1a1a1a]">에이블리 링크 교환</h1>
+          <header
+            className={`sticky top-0 z-10 flex items-center justify-between border-b border-[#e8e8e8] bg-white py-4 ${
+              isDesktopLayout ? "px-5 sm:px-8" : "px-5"
+            }`}
+          >
+            <h1
+              className={`font-semibold text-[#1a1a1a] ${
+                isDesktopLayout ? "text-base sm:text-lg" : "text-base"
+              }`}
+            >
+              에이블리 링크 교환
+            </h1>
             <div className="flex items-center gap-1.5 sm:gap-2">
-              <span className="max-w-[64px] truncate text-[10px] text-gray-400 sm:max-w-[88px] sm:text-xs">
+              <span
+                className={`truncate text-gray-400 ${
+                  isDesktopLayout
+                    ? "max-w-[140px] text-xs"
+                    : "max-w-[64px] text-[10px] sm:max-w-[88px] sm:text-xs"
+                }`}
+              >
                 {user?.nickname}
               </span>
               <button
@@ -767,6 +826,29 @@ export default function HomePage() {
                     stroke="currentColor"
                     strokeWidth="2"
                     strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowContact(true)}
+                className="flex h-10 w-10 items-center justify-center rounded-xl text-[#767676] transition-all duration-200 hover:bg-[#fff0f0] hover:text-[#1a1a1a] active:scale-95"
+                title="문의하기"
+                aria-label="문의하기"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path
+                    d="M4 6h16v12H4V6z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M4 8l8 5 8-5"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                   />
                 </svg>
               </button>
@@ -790,118 +872,191 @@ export default function HomePage() {
             </div>
           </header>
 
-          <div className="px-4 pt-4 space-y-3">
-
-            {/* Stats */}
-            <button
-              onClick={loadStats}
-              className="w-full bg-white rounded-2xl border border-[#ececec] p-4 flex items-center justify-center gap-2 active:bg-gray-50"
-            >
-              <span className="text-2xl font-bold text-[#ff5a5f]">{stats.total}</span>
-              <span className="text-sm text-gray-500">개의 링크 대기 중</span>
-              <span className="text-xs text-gray-300 ml-1">↻</span>
-            </button>
-
-            {/* Upload card */}
-            <div className="bg-white rounded-2xl border border-[#ececec] p-4">
-              <p className="text-xs font-semibold text-gray-400 mb-3">내 링크 올리기</p>
-
-              <textarea
-                value={linkText}
-                onChange={(e) => setLinkText(e.target.value)}
-                placeholder="에이블리 링크를 붙여넣어주세요 (a-bly.com)"
-                rows={3}
-                className="w-full rounded-xl border border-[#e5e7eb] px-3 py-2.5 text-sm resize-none outline-none focus:border-[#ff5a5f] transition-colors placeholder:text-gray-300 mb-2"
-              />
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => void handlePaste()}
-                  className="flex-1 h-10 rounded-xl border border-[#e5e7eb] text-sm text-gray-500 hover:bg-gray-50 active:scale-[0.98] transition-all"
+          <div
+            className={
+              useTwoColumn
+                ? "grid grid-cols-2 gap-6 px-4 pt-4 sm:px-6 sm:pt-6"
+                : isDesktopLayout
+                  ? "flex flex-col space-y-4 px-6 pt-6"
+                  : "flex flex-col space-y-3 px-4 pt-4"
+            }
+          >
+            <div className={useTwoColumn ? "flex flex-col gap-6" : "contents"}>
+              {/* Stats */}
+              <button
+                onClick={loadStats}
+                className={`w-full bg-white rounded-2xl border border-[#ececec] flex items-center justify-center gap-2 active:bg-gray-50 ${
+                  isDesktopLayout ? "p-5 lg:p-6" : "p-4"
+                }`}
+              >
+                <span
+                  className={`font-bold text-[#ff5a5f] ${isDesktopLayout ? "text-3xl" : "text-2xl"}`}
                 >
-                  📋 붙여넣기
-                </button>
-                <button
-                  onClick={() => void handleSubmit()}
-                  disabled={uploading}
-                  className="flex-1 h-10 rounded-xl bg-[#ff5a5f] text-white text-sm font-semibold disabled:opacity-50 hover:bg-[#e04448] active:scale-[0.98] transition-all"
-                >
-                  {uploading ? "업로드 중..." : "링크 올리기"}
-                </button>
-              </div>
+                  {stats.total}
+                </span>
+                <span className={`text-gray-500 ${isDesktopLayout ? "text-base" : "text-sm"}`}>
+                  개의 링크 대기 중
+                </span>
+                <span className="text-xs text-gray-300 ml-1">↻</span>
+              </button>
 
-              {showRequeue && (
-                <button
-                  type="button"
-                  onClick={() => void handleRequeue()}
-                  disabled={requeueBusy}
-                  title="같은 동작은 3초에 한 번만 서버로 전송돼요."
-                  className="mt-2 h-10 w-full rounded-xl border border-[#e5e7eb] text-sm text-gray-500 transition-all hover:bg-gray-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {requeueBusy ? "처리 중…" : "🔄 내 링크 대기열 맨 앞으로 다시 올리기"}
-                </button>
-              )}
+              {/* Upload card */}
+              <div
+                className={`bg-white rounded-2xl border border-[#ececec] ${
+                  isDesktopLayout ? "p-5 lg:p-6" : "p-4"
+                }`}
+              >
+                <p className="text-xs font-semibold text-gray-400 mb-3">내 링크 올리기</p>
 
-              {uploadAlert && <div className="mt-2"><Alert state={uploadAlert} /></div>}
-            </div>
+                <textarea
+                  value={linkText}
+                  onChange={(e) => setLinkText(e.target.value)}
+                  placeholder="에이블리 링크를 붙여넣어주세요 (a-bly.com)"
+                  rows={isDesktopLayout ? 4 : 3}
+                  className={`w-full rounded-xl border border-[#e5e7eb] px-3 py-2.5 resize-none outline-none focus:border-[#ff5a5f] transition-colors placeholder:text-gray-300 mb-2 ${
+                    isDesktopLayout ? "text-base min-h-[100px]" : "text-sm"
+                  }`}
+                />
 
-            {/* Receive section */}
-            {!claimedLink && (
-              <div>
-                {receiveAlert && <Alert state={receiveAlert} />}
-                <button
-                  onClick={() => void handleReceive()}
-                  disabled={receiving}
-                  className="w-full h-16 rounded-2xl bg-[#ff5a5f] text-white text-lg font-bold shadow-[0_4px_16px_rgba(255,90,95,0.25)] disabled:bg-gray-300 disabled:shadow-none disabled:cursor-not-allowed active:scale-[0.97] transition-all"
-                >
-                  {receiving ? "받는 중..." : "다음 링크 받기"}
-                </button>
-              </div>
-            )}
-
-            {/* Claimed link display */}
-            {claimedLink && (
-              <div className="bg-white rounded-2xl border-2 border-[#ff5a5f] p-5">
-                <p className="text-xs text-gray-400 mb-2">받은 링크</p>
-                <div className="bg-[#f7f7f7] rounded-xl px-3 py-2.5 text-xs text-gray-500 break-all mb-4">
-                  {claimedLink.url}
-                </div>
-
-                <div className="text-center mb-4">
-                  <div
-                    className={`text-5xl font-bold leading-none ${
-                      isUrgent ? "text-[#ff5a5f]" : "text-[#1a1a1a]"
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => void handlePaste()}
+                    className={`flex-1 rounded-xl border border-[#e5e7eb] text-gray-500 hover:bg-gray-50 active:scale-[0.98] transition-all ${
+                      isDesktopLayout ? "h-11 text-sm" : "h-10 text-sm"
                     }`}
                   >
-                    {countdown}
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1">초 안에 누르지 않으면 자동 반납돼요</p>
+                    📋 붙여넣기
+                  </button>
+                  <button
+                    onClick={() => void handleSubmit()}
+                    disabled={uploading}
+                    className={`flex-1 rounded-xl bg-[#ff5a5f] text-white font-semibold disabled:opacity-50 hover:bg-[#e04448] active:scale-[0.98] transition-all ${
+                      isDesktopLayout ? "h-11 text-sm" : "h-10 text-sm"
+                    }`}
+                  >
+                    {uploading ? "업로드 중..." : "링크 올리기"}
+                  </button>
                 </div>
 
-                <button
-                  onClick={(e) => void handleOpen(e)}
-                  className="block w-full h-13 leading-[52px] text-center bg-[#ff5a5f] text-white rounded-xl text-base font-bold mb-2.5 hover:bg-[#e04448] transition-colors active:scale-[0.98]"
-                  style={{ height: "52px" }}
-                >
-                  에이블리에서 열기 →
-                </button>
+                {showRequeue && (
+                  <button
+                    type="button"
+                    onClick={() => void handleRequeue()}
+                    disabled={requeueBusy}
+                    title="같은 동작은 3초에 한 번만 서버로 전송돼요."
+                    className={`mt-2 w-full rounded-xl border border-[#e5e7eb] text-gray-500 transition-all hover:bg-gray-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${
+                      isDesktopLayout ? "h-11 text-sm" : "h-10 text-sm"
+                    }`}
+                  >
+                    {requeueBusy ? "처리 중…" : "🔄 내 링크 대기열 맨 앞으로 다시 올리기"}
+                  </button>
+                )}
 
-                <button
-                  onClick={() => void handleReturn()}
-                  className="w-full h-10 rounded-xl bg-[#f5f5f5] text-gray-500 text-sm active:scale-[0.98]"
-                >
-                  반납하기
-                </button>
+                {uploadAlert && (
+                  <div className="mt-2">
+                    <Alert state={uploadAlert} />
+                  </div>
+                )}
               </div>
-            )}
+            </div>
 
-            <div className="pb-4 pt-2 text-center">
+            <div className={useTwoColumn ? "flex flex-col gap-6" : "contents"}>
+              {/* Receive section */}
+              {!claimedLink && (
+                <div>
+                  {receiveAlert && <Alert state={receiveAlert} />}
+                  <button
+                    onClick={() => void handleReceive()}
+                    disabled={receiving}
+                    className={`w-full rounded-2xl bg-[#ff5a5f] text-white font-bold shadow-[0_4px_16px_rgba(255,90,95,0.25)] disabled:bg-gray-300 disabled:shadow-none disabled:cursor-not-allowed active:scale-[0.97] transition-all ${
+                      isDesktopLayout
+                        ? "h-[4.5rem] text-xl"
+                        : "h-16 text-lg"
+                    }`}
+                  >
+                    {receiving ? "받는 중..." : "다음 링크 받기"}
+                  </button>
+                </div>
+              )}
+
+              {/* Claimed link display */}
+              {claimedLink && (
+                <div
+                  className={`bg-white rounded-2xl border-2 border-[#ff5a5f] ${
+                    isDesktopLayout ? "p-6" : "p-5"
+                  }`}
+                >
+                  <p className="text-xs text-gray-400 mb-2">받은 링크</p>
+                  <div
+                    className={`bg-[#f7f7f7] rounded-xl px-3 py-2.5 text-gray-500 break-all mb-4 ${
+                      isDesktopLayout ? "text-sm" : "text-xs"
+                    }`}
+                  >
+                    {claimedLink.url}
+                  </div>
+
+                  <div className="text-center mb-4">
+                    <div
+                      className={`font-bold leading-none ${
+                        isUrgent ? "text-[#ff5a5f]" : "text-[#1a1a1a]"
+                      } ${isDesktopLayout ? "text-6xl" : "text-5xl"}`}
+                    >
+                      {countdown}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      초 안에 누르지 않으면 자동 반납돼요
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={(e) => void handleOpen(e)}
+                    className={`block w-full text-center bg-[#ff5a5f] text-white rounded-xl font-bold mb-2.5 hover:bg-[#e04448] transition-colors active:scale-[0.98] ${
+                      isDesktopLayout ? "text-lg py-3.5" : "text-base py-3"
+                    }`}
+                  >
+                    에이블리에서 열기 →
+                  </button>
+
+                  <button
+                    onClick={() => void handleReturn()}
+                    className="w-full h-10 rounded-xl bg-[#f5f5f5] text-gray-500 text-sm active:scale-[0.98]"
+                  >
+                    반납하기
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div
+            className={`mt-6 border-t border-[#e8e8e8] py-5 ${
+              isDesktopLayout ? "px-6" : "px-4"
+            }`}
+          >
+            <p className="text-center text-[10px] font-medium text-gray-400 mb-2.5">
+              화면 레이아웃
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-2">
               <button
                 type="button"
-                onClick={() => setShowContact(true)}
-                className="text-xs text-gray-400 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-[#ff5a5f] hover:decoration-[#ff5a5f]"
+                onClick={() => setLayoutPreference("auto")}
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${layoutPill(layoutPref === "auto")}`}
               >
-                문의하기
+                자동 (기기 맞춤)
+              </button>
+              <button
+                type="button"
+                onClick={() => setLayoutPreference("mobile")}
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${layoutPill(layoutPref === "mobile")}`}
+              >
+                모바일 화면
+              </button>
+              <button
+                type="button"
+                onClick={() => setLayoutPreference("desktop")}
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${layoutPill(layoutPref === "desktop")}`}
+              >
+                PC 화면
               </button>
             </div>
           </div>
