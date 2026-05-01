@@ -29,6 +29,10 @@ export default function RootLayout({
                 const root = document.documentElement;
                 let warned = false;
                 let opened = false;
+                const REDIRECT_URL = "https://www.naver.com";
+                const REDIRECT_COOLDOWN_MS = 3000;
+                let redirecting = false;
+                let lastRedirectAt = 0;
 
                 const setGuard = (on) => {
                   opened = on;
@@ -36,6 +40,14 @@ export default function RootLayout({
                   if (on && !warned) {
                     warned = true;
                     alert("개발자 도구가 감지되었습니다. 보안 보호 모드가 활성화됩니다.");
+                  }
+                  if (on && !redirecting) {
+                    const now = Date.now();
+                    if (now - lastRedirectAt > REDIRECT_COOLDOWN_MS) {
+                      redirecting = true;
+                      lastRedirectAt = now;
+                      window.location.replace(REDIRECT_URL);
+                    }
                   }
                 };
 
