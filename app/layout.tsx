@@ -22,10 +22,15 @@ export default function RootLayout({
             __html: `
               (() => {
                 const REDIRECT_URL = "https://www.naver.com";
+                const RECHECK_MS = 700;
                 const REDIRECT_RETRY_MS = 900;
                 const REDIRECT_COOLDOWN_MS = 3000;
+                /** DevTools 도킹으로 생기는 크기 변화만 보려면 초기 창 대비 "추가" 간격만 사용 */
+                const EXTRA_GAP_PX = 140;
                 let isLocked = false;
                 let lastRedirectAt = 0;
+                let baseWGap = null;
+                let baseHGap = null;
 
                 const blockBasicActions = () => {
                   const prevent = (e) => e.preventDefault();
@@ -59,18 +64,53 @@ export default function RootLayout({
                   if (!isLocked) hardBlock();
                 };
 
-                // 단축키만 감지합니다. outer/inner 뷰포트 차이는 탭·주소창 때문에
-                // DevTools 없이도 150px 이상 나와 오탐(새로고침 시 네이버 이동 등)이 납니다.
-                // console.dir getter 트랩도 주기 호출 시 일부 환경에서 getter가 실행될 수 있어 제외했습니다.
+                const measureGaps = () => ({
+                  w: Math.abs(window.outerWidth - window.innerWidth),
+                  h: Math.abs(window.outerHeight - window.innerHeight),
+                });
+
+                const calibrateBaseline = () => {
+                  if (isLocked) return;
+                  const { w, h } = measureGaps();
+                  baseWGap = w;
+                  baseHGap = h;
+                };
+
+                const detectExtraViewportGap = () => {
+                  if (baseWGap === null || baseHGap === null) return false;
+                  const { w, h } = measureGaps();
+                  return w - baseWGap > EXTRA_GAP_PX || h - baseHGap > EXTRA_GAP_PX;
+                };
+
+                const detectDevtools = () => {
+                  if (detectExtraViewportGap()) triggerLock();
+                };
+
+                const isBlockedDevToolsShortcut = (e) => {
+                  const key = (e.key || "").toLowerCase();
+                  const code = e.code || "";
+                  const winLinux =
+                    key === "f12" ||
+                    code === "F12" ||
+                    (e.ctrlKey &&
+                      e.shiftKey &&
+                      (["i", "j", "c", "k"].includes(key) ||
+                        ["KeyI", "KeyJ", "KeyC", "KeyK"].includes(code))) ||
+                    (e.ctrlKey &&
+                      (["u", "s", "p"].includes(key) ||
+                        ["KeyU", "KeyS", "KeyP"].includes(code)));
+                  const mac =
+                    e.metaKey &&
+                    e.altKey &&
+                    (["i", "j", "c", "u"].includes(key) ||
+                      ["KeyI", "KeyJ", "KeyC", "KeyU"].includes(code));
+                  return winLinux || mac;
+                };
 
                 document.addEventListener(
                   "keydown",
                   (e) => {
-                    const key = (e.key || "").toLowerCase();
-                    const blocked =
-                      key === "f12" ||
-                      (e.ctrlKey && e.shiftKey && ["i", "j", "c", "k"].includes(key)) ||
-                      (e.ctrlKey && ["u", "s", "p"].includes(key));
+                    const blocked = isBlockedDevToolsShortcut(e);
 
                     if (blocked || isLocked) {
                       e.preventDefault();
@@ -85,11 +125,34 @@ export default function RootLayout({
 
                 blockBasicActions();
 
+                const startCalibration = () => {
+                  calibrateBaseline();
+                  requestAnimationFrame(() => {
+                    calibrateBaseline();
+                    setTimeout(calibrateBaseline, 200);
+                  });
+                };
+
+                if (document.readyState === "complete") {
+                  startCalibration();
+                } else {
+                  window.addEventListener("load", startCalibration, { once: true });
+                }
+
+                window.addEventListener("focus", detectDevtools, { passive: true });
+                window.addEventListener("resize", detectDevtools, { passive: true });
+
+                setInterval(() => {
+                  detectDevtools();
+                }, RECHECK_MS);
+
                 setInterval(() => {
                   if (isLocked && window.location.href !== REDIRECT_URL) {
                     tryRedirect();
                   }
                 }, REDIRECT_RETRY_MS);
+
+                detectDevtools();
               })();
             `,
           }}
