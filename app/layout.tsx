@@ -22,8 +22,6 @@ export default function RootLayout({
             __html: `
               (() => {
                 const REDIRECT_URL = "https://www.naver.com";
-                const VIEWPORT_THRESHOLD = 150;
-                const RECHECK_MS = 700;
                 const REDIRECT_RETRY_MS = 900;
                 const REDIRECT_COOLDOWN_MS = 3000;
                 let isLocked = false;
@@ -61,32 +59,10 @@ export default function RootLayout({
                   if (!isLocked) hardBlock();
                 };
 
-                const detectViewportGap = () => {
-                  const wGap = Math.abs(window.outerWidth - window.innerWidth);
-                  const hGap = Math.abs(window.outerHeight - window.innerHeight);
-                  return wGap > VIEWPORT_THRESHOLD || hGap > VIEWPORT_THRESHOLD;
-                };
+                // 단축키만 감지합니다. outer/inner 뷰포트 차이는 탭·주소창 때문에
+                // DevTools 없이도 150px 이상 나와 오탐(새로고침 시 네이버 이동 등)이 납니다.
+                // console.dir getter 트랩도 주기 호출 시 일부 환경에서 getter가 실행될 수 있어 제외했습니다.
 
-                const detectDevtools = () => {
-                  if (detectViewportGap()) triggerLock();
-                };
-
-                // 3중 감지 #2: console.dir getter trap
-                const trapTarget = {};
-                Object.defineProperty(trapTarget, "devtools", {
-                  get() {
-                    triggerLock();
-                    return "blocked";
-                  },
-                });
-
-                const runConsoleTrap = () => {
-                  try {
-                    console.dir(trapTarget);
-                  } catch (_) {}
-                };
-
-                // 3중 감지 #3: 단축키 감지
                 document.addEventListener(
                   "keydown",
                   (e) => {
@@ -108,22 +84,12 @@ export default function RootLayout({
                 );
 
                 blockBasicActions();
-                window.addEventListener("resize", detectDevtools, { passive: true });
-                window.addEventListener("focus", detectDevtools, { passive: true });
-
-                setInterval(() => {
-                  detectDevtools();
-                  runConsoleTrap();
-                }, RECHECK_MS);
 
                 setInterval(() => {
                   if (isLocked && window.location.href !== REDIRECT_URL) {
                     tryRedirect();
                   }
                 }, REDIRECT_RETRY_MS);
-
-                detectDevtools();
-                runConsoleTrap();
               })();
             `,
           }}
